@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر البرمجة المستدامة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        .scratch-block { border-radius: 4px; padding: 6px 12px; font-weight: bold; font-size: 13px; color: white; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+        .scratch-repeat { background: #eab308; padding: 8px; border-radius: 8px 8px 4px 8px; }
+        .scratch-wait { background: #eab308; }
+        .scratch-move { background: #4f46e5; }
+        .scratch-turn { background: #4f46e5; }
+        .plant-transition { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .shake-animation { animation: shake 0.5s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const Icon = ({ name, size = 20, className = "" }) => <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+
+        // رسائل التعزيز
+        const reinforcementMessages = [
+            "أنتِ مبرمجة متميزة! ذكاؤكِ يساهم في حماية البيئة.",
+            "عمل رائع! لقد أتقنتِ مفهوم التكرار بكفاءة عالية.",
+            "مذهل! تفكيركِ المنطقي يقودكِ نحو مستقبل تقني مشرق.",
+            "بارك الله في جهودكِ، حل ذكي ومختصر تماماً كالمحترفين."
+        ];
+
+        const InteractivePlant = ({ progress }) => {
+            const height = 30 + (progress * 0.6); 
+            const color = progress < 50 ? "#94a3b8" : (progress < 100 ? "#4ade80" : "#16a34a");
+            const leafOpacity = progress > 20 ? 1 : 0;
+            const secondLeafOpacity = progress > 60 ? 1 : 0;
+            
+            return (
+                <div className="flex flex-col items-center justify-end h-40 w-full overflow-visible">
+                    <svg width="100" height="130" viewBox="0 0 100 130" className="plant-transition">
+                        <ellipse cx="50" cy="120" rx="30" ry="8" fill="#78350f" opacity="0.2" />
+                        <rect x="48" y={120 - height} width="4" height={height} rx="2" fill={color} className="plant-transition" />
+                        <g opacity={leafOpacity} transform={`translate(50, ${110 - height * 0.4})`} className="plant-transition">
+                            <path d="M0 0 C 15 -8, 25 8, 0 15 C -8 8, -8 -8, 0 0" fill={color} transform="rotate(-30)" />
+                        </g>
+                        <g opacity={secondLeafOpacity} transform={`translate(50, ${110 - height * 0.7})`} className="plant-transition">
+                            <path d="M0 0 C -15 -8, -25 8, 0 15 C 8 8, 8 -8, 0 0" fill={color} transform="rotate(30)" />
+                        </g>
+                        {progress >= 100 && (
+                            <g transform={`translate(50, ${125 - height})`} className="animate-bounce">
+                                <circle cx="0" cy="0" r="6" fill="#facc15" />
+                                {[0, 72, 144, 216, 288].map(deg => (
+                                    <ellipse key={deg} cx="9" cy="0" rx="6" ry="4" fill="#fde047" transform={`rotate(${deg})`} />
+                                ))}
+                            </g>
+                        )}
+                    </svg>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('student');
+            const [step, setStep] = useState(1);
+            const [studentName, setStudentName] = useState('');
+            const [responses, setResponses] = useState({ q1: '', q2: '', reflection: '' });
+            const [moisture, setMoisture] = useState(0);
+            const [showQ2, setShowQ2] = useState(false);
+            const [errorMessage, setErrorMessage] = useState('');
+            const [submittedData, setSubmittedData] = useState([]);
+            const [currentReinforcement, setCurrentReinforcement] = useState('');
+            
+            // Teacher Access Security
+            const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+            const [enteredPassword, setEnteredPassword] = useState('');
+            const [passwordError, setPasswordError] = useState(false);
+            const TEACHER_PASSWORD = "1234";
+
+            const correctAnswerQ1 = "(1) تجعل الكود أقصر، أسرع في البرمجة وأقل أخطاء.";
+            const correctAnswerQ2 = "(1) عندما يصبح الشرط خاطئاً (أي وصلت الرطوبة لـ 100%).";
+
+            useEffect(() => {
+                const saved = localStorage.getItem('sustainable_lab_v1');
+                if (saved) setSubmittedData(JSON.parse(saved));
+            }, []);
+
+            useEffect(() => { lucide.createIcons(); }, [view, step, moisture, showQ2, errorMessage, isPasswordModalOpen, submittedData]);
+
+            useEffect(() => {
+                if (moisture >= 100) {
+                    const timer = setTimeout(() => setShowQ2(true), 600);
+                    return () => clearTimeout(timer);
+                }
+            }, [moisture]);
+
+            const handleNextStep = (currentStepResponse, correctResponse, nextStep) => {
+                if (currentStepResponse === correctResponse) {
+                    setErrorMessage('');
+                    setStep(nextStep);
+                } else {
+                    setErrorMessage('إجابة خاطئة! حاولي مرة أخرى لاكتشاف سر الكود المستدام.');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                }
+            };
+
+            const saveSubmission = () => {
+                const newEntry = { ...responses, id: Date.now(), name: studentName, date: new Date().toLocaleString() };
+                const newData = [newEntry, ...submittedData];
+                setSubmittedData(newData);
+                localStorage.setItem('sustainable_lab_v1', JSON.stringify(newData));
+                
+                // اختيار رسالة تعزيز عشوائية
+                const msg = reinforcementMessages[Math.floor(Math.random() * reinforcementMessages.length)];
+                setCurrentReinforcement(msg);
+                setStep(5);
+            };
+
+            const deleteEntry = (id) => {
+                const newData = submittedData.filter(item => item.id !== id);
+                setSubmittedData(newData);
+                localStorage.setItem('sustainable_lab_v1', JSON.stringify(newData));
+            };
+
+            const handleTeacherClick = () => {
+                if (view === 'teacher') {
+                    setView('student');
+                } else {
+                    setIsPasswordModalOpen(true);
+                }
+            };
+
+            const checkPassword = () => {
+                if (enteredPassword === TEACHER_PASSWORD) {
+                    setView('teacher');
+                    setIsPasswordModalOpen(false);
+                    setEnteredPassword('');
+                    setPasswordError(false);
+                } else {
+                    setPasswordError(true);
+                    setTimeout(() => setPasswordError(false), 2000);
+                }
+            };
+
+            const Header = () => (
+                <header className="bg-[#00a99d] p-4 flex justify-between items-center text-white shadow-md sticky top-0 z-50">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-lg"><Icon name="leaf" /></div>
+                        <h1 className="font-bold text-lg">مختبر البرمجة المستدامة</h1>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={handleTeacherClick} className={`flex items-center gap-2 text-sm px-4 py-2 rounded-full transition-all ${view === 'teacher' ? 'bg-white text-[#00a99d] shadow-inner font-bold' : 'bg-white/10 hover:bg-white/20'}`}>
+                             لوحة المعلمة <Icon name={view === 'teacher' ? "unlock" : "lock"} size={16} />
+                        </button>
+                    </div>
+                </header>
+            );
+
+            if (isPasswordModalOpen) {
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+                            <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Icon name="lock" size={32} className="text-[#00a99d]" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 mb-2">منطقة المعلمة</h3>
+                            <p className="text-slate-500 text-sm mb-6">يرجى إدخال كلمة المرور (1234)</p>
+                            <input 
+                                type="password" 
+                                className={`w-full p-4 rounded-xl border-2 text-center text-2xl font-black outline-none transition-all mb-4 ${passwordError ? 'border-red-500 bg-red-50' : 'border-slate-100 bg-slate-50 focus:border-[#00a99d]'}`}
+                                value={enteredPassword}
+                                onChange={(e) => setEnteredPassword(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && checkPassword()}
+                                autoFocus
+                                placeholder="••••"
+                            />
+                            {passwordError && <p className="text-red-500 text-xs font-bold mb-4">كلمة المرور غير صحيحة!</p>}
+                            <div className="flex gap-3">
+                                <button onClick={() => setIsPasswordModalOpen(false)} className="flex-1 py-3 text-slate-400 font-bold">إلغاء</button>
+                                <button onClick={checkPassword} className="flex-1 bg-[#00a99d] text-white py-3 rounded-xl font-bold">دخول</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (view === 'teacher') {
+                return (
+                    <div className="min-h-screen">
+                        <Header />
+                        <div className="p-8 max-w-6xl mx-auto">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2">
+                                <span className="bg-[#00a99d] w-3 h-8 rounded-full"></span>
+                                سجل استجابات الطالبات ({submittedData.length})
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {submittedData.length === 0 ? (
+                                    <div className="col-span-full py-20 text-center text-slate-400 border-2 border-dashed rounded-3xl bg-white">لا توجد سجلات بعد</div>
+                                ) : (
+                                    submittedData.map(d => (
+                                        <div key={d.id} className="bg-white p-6 rounded-3xl card-shadow border border-slate-100 relative group overflow-hidden">
+                                            <button 
+                                                onClick={() => deleteEntry(d.id)}
+                                                className="absolute top-4 left-4 p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                                title="حذف الإجابة"
+                                            >
+                                                <Icon name="trash-2" size={18} />
+                                            </button>
+                                            <div className="font-bold text-teal-600 mb-1 ml-6">{d.name}</div>
+                                            <div className="text-[10px] text-slate-400 mb-4">{d.date}</div>
+                                            <div className="space-y-2 text-sm">
+                                                <p className="text-xs text-slate-500 border-r-2 border-teal-100 pr-2"><strong>س1:</strong> {d.q1}</p>
+                                                <p className="text-xs text-slate-500 border-r-2 border-teal-100 pr-2"><strong>س2:</strong> {d.q2}</p>
+                                                <div className="bg-slate-50 p-3 rounded-xl mt-3">
+                                                    <div className="text-[10px] font-bold text-slate-400 mb-1">الاستنتاج:</div>
+                                                    <p className="text-slate-700 leading-relaxed italic">"{d.reflection}"</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <Header />
+                    <div className="max-w-4xl mx-auto px-4 mt-10">
+                        {step === 1 && (
+                            <div className="bg-white rounded-[2.5rem] card-shadow p-12 text-center border-t-[12px] border-[#00a99d] animate-in fade-in zoom-in">
+                                <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Icon name="cpu" size={40} className="text-[#00a99d]" />
+                                </div>
+                                <h1 className="text-4xl font-black text-slate-800 mb-4">مختبر البرمجة المستدامة</h1>
+                                <p className="text-slate-500 text-lg mb-10">اكتشفي قوة التكرار في بناء تطبيقات ذكية ومستدامة.</p>
+                                <button onClick={() => setStep(2)} className="bg-[#00a99d] text-white px-12 py-5 rounded-full font-bold text-xl hover:scale-105 transition-all shadow-lg shadow-teal-100">ابدأ المهمة</button>
+                            </div>
+                        )}
+
+                        {step === 2 && (
+                            <div className="bg-white rounded-[2.5rem] card-shadow overflow-hidden border border-slate-100 animate-in slide-in-from-left">
+                                <div className="bg-[#00a99d] p-6 text-white font-bold flex items-center gap-2"><Icon name="zap" /> المرحلة الأولى: اختصار الكود</div>
+                                <div className="p-8">
+                                    <p className="text-slate-600 mb-8 font-medium">ساعدي نورة في تحويل الكود الطويل إلى كود ذكي باستخدام التكرار.</p>
+                                    
+                                   
+<div className="grid md:grid-cols-2 gap-8 mb-10 items-start">
+                                        {/* الكود الطويل - مربع أخضر */}
+                                        <div className="bg-emerald-50 p-6 rounded-3xl border-2 border-emerald-100 shadow-inner">
+                                            <h4 className="text-center text-[11px] font-black text-emerald-600 mb-4 uppercase">بدون تكرار (كود طويل)</h4>
+                                            <div className="flex flex-col items-center scale-90 opacity-80">
+                                                {[1,2,3,4].map(i => (
+                                                    <React.Fragment key={i}>
+                                                        <div className="scratch-block scratch-wait">انتظر 1 ثانية</div>
+                                                        <div className="scratch-block scratch-move">تحرك 50 خطوة</div>
+                                                        <div className="scratch-block scratch-turn">استدر 90 درجة</div>
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* الكود الذكي - مربع أخضر مماثل */}
+                                        <div className="bg-emerald-50 p-6 rounded-3xl border-2 border-emerald-100 shadow-inner">
+                                            <h4 className="text-center text-[11px] font-black text-emerald-600 mb-4 uppercase">استخدام التكرار (كود ذكي)</h4>
+                                            <div className="max-w-[180px] mx-auto">
+                                                <div className="scratch-repeat p-2">
+                                                    <div className="text-white text-sm font-bold mb-2">كرر <span className="bg-white text-slate-800 px-2 rounded mx-1">4</span> مرات</div>
+                                                    <div className="bg-white/10 p-2 rounded-lg space-y-1">
+                                                        <div className="scratch-block scratch-wait">انتظر 1 ثانية</div>
+                                                        <div className="scratch-block scratch-move">تحرك 50 خطوة</div>
+                                                        <div className="scratch-block scratch-turn">استدر 90 درجة</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                 
+
+                                    <div className="space-y-4">
+                                        <label className="font-bold text-slate-700 block text-lg">سؤال (1): ما هي الفائدة الأساسية من استخدام "التكرار"؟</label>
+                                        {[
+                                            "(1) تجعل الكود أقصر، أسرع في البرمجة وأقل أخطاء.",
+                                            "(2) لا تفرق بشيء سوى أنها تزيد عدد اللبنات البرمجية.",
+                                            "(3) تجعل الكود أبطأ ولا يعمل في الأجهزة القديمة."
+                                        ].map(opt => (
+                                            <button key={opt} onClick={() => { setResponses({...responses, q1: opt}); setErrorMessage(''); }} className={`w-full p-5 text-right rounded-2xl border-2 transition-all font-bold ${responses.q1 === opt ? 'border-[#00a99d] bg-teal-50 text-[#00a99d]' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}>{opt}</button>
+                                        ))}
+
+                                        {errorMessage && (
+                                            <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-2 font-bold animate-bounce shake-animation">
+                                                <Icon name="alert-circle" /> {errorMessage}
+                                            </div>
+                                        )}
+
+                                        <button disabled={!responses.q1} onClick={() => handleNextStep(responses.q1, correctAnswerQ1, 3)} className="w-full bg-slate-800 text-white p-5 rounded-2xl font-bold mt-4 shadow-xl disabled:opacity-30">التالي</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 3 && (
+                            <div className="bg-white rounded-[2.5rem] card-shadow overflow-hidden border border-slate-100 animate-in slide-in-from-left">
+                                <div className="bg-blue-600 p-6 text-white font-bold flex items-center gap-2"><Icon name="droplet" /> المرحلة الثانية: الري الذكي (While)</div>
+                                <div className="p-8">
+                                    <div className="grid md:grid-cols-2 gap-8 mb-8">
+                                        <div className="bg-slate-50 rounded-[2rem] p-6 border-2 border-slate-100 flex flex-col justify-center items-center h-[280px] shadow-inner">
+                                            <InteractivePlant progress={moisture} />
+                                            <div className="w-full mt-4">
+                                                <div className="flex justify-between text-[10px] font-black text-slate-400 mb-1 px-1">
+                                                    <span>مستوى الرطوبة:</span>
+                                                    <span>{moisture}%</span>
+                                                </div>
+                                                <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden p-0.5">
+                                                    <div className={`h-full rounded-full transition-all duration-300 ${moisture >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${moisture}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                           
+                                            <button 
+                                                onMouseDown={() => {
+                                                    const interval = setInterval(() => {
+                                                        setMoisture(m => { if (m >= 100) { clearInterval(interval); return 100; } return m + 4; });
+                                                    }, 80);
+                                                    const stop = () => { clearInterval(interval); window.removeEventListener('mouseup', stop); };
+                                                    window.addEventListener('mouseup', stop);
+                                                }}
+                                                disabled={moisture >= 100}
+                                                className={`py-6 rounded-3xl font-black text-xl shadow-lg transition-all ${moisture >= 100 ? 'bg-emerald-100 text-emerald-600 scale-95' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'}`}
+                                            >
+                                                {moisture >= 100 ? "تم الوصول للهدف!" : "اضغطي باستمرار للري"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {showQ2 && (
+                                        <div className="mt-8 pt-8 border-t-2 border-slate-50 space-y-4 animate-in fade-in slide-in-from-bottom">
+                                            <label className="font-bold text-slate-700 block text-lg">سؤال (2): متى يتوقف تكرار (While) عن العمل؟</label>
+                                            {[
+                                                "(1) عندما يصبح الشرط خاطئاً (أي وصلت الرطوبة لـ 100%).",
+                                                "(2) يتوقف بمجرد الضغط على زر الفأرة مرة واحدة فقط.",
+                                                "(3) لا يتوقف أبداً وسيستمر البرنامج في العمل للأبد."
+                                            ].map(opt => (
+                                                <button key={opt} onClick={() => { setResponses({...responses, q2: opt}); setErrorMessage(''); }} className={`w-full p-5 text-right rounded-2xl border-2 transition-all font-bold ${responses.q2 === opt ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}>{opt}</button>
+                                            ))}
+                                            
+                                            {errorMessage && (
+                                                <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-2 font-bold animate-bounce shake-animation">
+                                                    <Icon name="alert-circle" /> {errorMessage}
+                                                </div>
+                                            )}
+
+                                            <button disabled={!responses.q2} onClick={() => handleNextStep(responses.q2, correctAnswerQ2, 4)} className="w-full bg-slate-800 text-white p-5 rounded-2xl font-bold mt-4 shadow-xl disabled:opacity-30">كتابة التقرير</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 4 && (
+                            <div className="bg-white rounded-[2.5rem] card-shadow p-10 border border-slate-100 animate-in zoom-in">
+                                <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3">
+                                    <Icon name="file-text" className="text-teal-600" /> تقرير المختبر
+                                </h2>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="font-bold text-slate-600 block mb-2">أسماء الطالبات (الثنائي):</label>
+                                        <input type="text" className="w-full p-4 rounded-xl border-2 bg-slate-50 outline-none focus:border-teal-500 transition-all font-bold" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="اكتبي الأسماء هنا..." />
+                                    </div>
+                                    <div>
+                                        <label className="font-bold text-slate-600 block mb-2">ماذا استنتجتِ عن تكرار (While) من خلال التجربة؟</label>
+                                        <textarea rows="4" className="w-full p-4 rounded-xl border-2 bg-slate-50 outline-none focus:border-teal-500 transition-all font-bold" value={responses.reflection} onChange={(e) => setResponses({...responses, reflection: e.target.value})} placeholder="استنتجنا أن تكرار While..." />
+                                    </div>
+                                    <button disabled={!studentName || !responses.reflection} onClick={saveSubmission} className="w-full bg-[#00a99d] text-white p-5 rounded-2xl font-black text-xl shadow-lg hover:bg-teal-700 disabled:opacity-30 transition-all">إرسال التقرير للمعلمة</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 5 && (
+                            <div className="bg-white rounded-[3rem] card-shadow p-16 text-center border-b-8 border-emerald-500 animate-in zoom-in">
+                                <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                                    <Icon name="award" size={56} className="text-emerald-500" />
+                                </div>
+                                <h1 className="text-4xl font-black text-slate-800 mb-4">تم الإرسال بنجاح!</h1>
+                                
+                                {/* رسالة التعزيز */}
+                                <div className="bg-emerald-50 p-6 rounded-[2rem] mb-8 border border-emerald-100">
+                                    <p className="text-xl text-emerald-700 font-bold leading-relaxed">{currentReinforcement}</p>
+                                </div>
+
+                                <p className="text-slate-400 mb-2 italic">لقد استلمت المعلمة تقريركن في "مختبر البرمجة المستدامة".</p>
+                                <p className="text-slate-300 text-sm">يمكنكن الآن إغلاق هذه الصفحة.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
