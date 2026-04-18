@@ -177,7 +177,6 @@
                                 <Icon name="lock" size={32} className="text-[#00a99d]" />
                             </div>
                             <h3 className="text-xl font-black text-slate-800 mb-2">منطقة المعلمة</h3>
-                            <p className="text-slate-500 text-sm mb-6">يرجى إدخال كلمة المرور (1234)</p>
                             <input 
                                 type="password" 
                                 className={`w-full p-4 rounded-xl border-2 text-center text-2xl font-black outline-none transition-all mb-4 ${passwordError ? 'border-red-500 bg-red-50' : 'border-slate-100 bg-slate-50 focus:border-[#00a99d]'}`}
@@ -248,16 +247,16 @@
                                     <Icon name="cpu" size={40} className="text-[#00a99d]" />
                                 </div>
                                 <h1 className="text-4xl font-black text-slate-800 mb-4">مختبر البرمجة المستدامة</h1>
-                                <p className="text-slate-500 text-lg mb-10">اكتشفي قوة التكرار في بناء تطبيقات ذكية ومستدامة.</p>
+                                <p className="text-slate-500 text-lg mb-10">عزيزاتي الطالبات، تعاوني مع زميلتك في هذه المهمة التفاعلية لاكتشاف "سر التكرار" في البرمجة.</br> في نهاية النشاط ستقومن بكتابة تقرير وإرساله للمعلمة.</p>
                                 <button onClick={() => setStep(2)} className="bg-[#00a99d] text-white px-12 py-5 rounded-full font-bold text-xl hover:scale-105 transition-all shadow-lg shadow-teal-100">ابدأ المهمة</button>
                             </div>
                         )}
 
                         {step === 2 && (
                             <div className="bg-white rounded-[2.5rem] card-shadow overflow-hidden border border-slate-100 animate-in slide-in-from-left">
-                                <div className="bg-[#00a99d] p-6 text-white font-bold flex items-center gap-2"><Icon name="zap" /> المرحلة الأولى: اختصار الكود</div>
+                                <div className="bg-[#00a99d] p-6 text-white font-bold flex items-center gap-2"><Icon name="zap" /> المرحلة الأولى: مشكلة نورة</div>
                                 <div className="p-8">
-                                    <p className="text-slate-600 mb-8 font-medium">ساعدي نورة في تحويل الكود الطويل إلى كود ذكي باستخدام التكرار.</p>
+                                    <p className="text-slate-600 mb-8 font-medium">ساعدي نورة في معرفة أي المقاطع البرمجية التالية يخدم الاستدامة عبر تقليل تكرار الأوامر يدوياً؟.</p>
                                     
                                    
 <div className="grid md:grid-cols-2 gap-8 mb-10 items-start">
@@ -316,7 +315,9 @@
 
                         {step === 3 && (
                             <div className="bg-white rounded-[2.5rem] card-shadow overflow-hidden border border-slate-100 animate-in slide-in-from-left">
-                                <div className="bg-blue-600 p-6 text-white font-bold flex items-center gap-2"><Icon name="droplet" /> المرحلة الثانية: الري الذكي (While)</div>
+                                <div className="bg-blue-600 p-6 text-white font-bold flex items-center gap-2"><Icon name="droplet" /> المرحلة الثانية: نظام الري الذكي (While)</div>
+                                <p className="text-slate-600 mb-8 font-medium">"الشرط: طالما أن الرطوبة أقل من 100%، استمري بالسقي!"</p>
+
                                 <div className="p-8">
                                     <div className="grid md:grid-cols-2 gap-8 mb-8">
                                         <div className="bg-slate-50 rounded-[2rem] p-6 border-2 border-slate-100 flex flex-col justify-center items-center h-[280px] shadow-inner">
